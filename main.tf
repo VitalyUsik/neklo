@@ -116,13 +116,6 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Statement = [
       {
         Action = [
-          "s3:GetObject"
-        ]
-        Effect   = "Allow"
-        Resource = "${aws_s3_bucket.uploads.arn}/*"
-      },
-      {
-        Action = [
           "docdb:*"
         ]
         Effect   = "Allow"
@@ -140,6 +133,11 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_iam_role_policy_attachment" "lambda_vpc_access_execution" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_s3_read_only" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
 }
 
 resource "aws_lambda_permission" "allow_bucket" {
