@@ -8,13 +8,16 @@ def lambda_handler(event, context):
     
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
+
+    # Download cert file from S3
+    s3.download_file(bucket, 'global-bundle.pem', f'/tmp/global-bundle.pem')
     
     # Download file from S3
     download_path = f'/tmp/{key}'
     s3.download_file(bucket, key, download_path)
     
     # Connect to DocumentDB
-    client = MongoClient(os.environ['DOCDB_CLUSTER_ENDPOINT'])
+    client = MongoClient(f'mongodb://masterUser:masterPassword@{os.environ['DOCDB_CLUSTER_ENDPOINT']}:27017/?tls=true&tlsCAFile=/tmp/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false')
     db = client[os.environ['DOCDB_DB_NAME']]
     
     # Ensure the database and collection exist
