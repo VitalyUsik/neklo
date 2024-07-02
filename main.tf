@@ -11,6 +11,7 @@ module "vpc" {
 
   azs             = var.azs
   public_subnets  = var.public_subnets
+  private_subnets = var.private_subnets
 
   enable_nat_gateway = false
   map_public_ip_on_launch = true
@@ -44,6 +45,13 @@ resource "aws_security_group" "docdb_sg" {
     to_port     = 27017
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
+  }
+
+  ingress {
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    security_groups = [aws_security_group.lambda_sg.id]  # Allow traffic from Lambda SG
   }
 
   egress {
@@ -106,15 +114,6 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Statement = [
       {
         Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Effect   = "Allow"
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Action = [
           "s3:GetObject"
         ]
         Effect   = "Allow"
@@ -131,12 +130,35 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access_execution" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.process_student_file.arn
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.uploads.arn
+}
+
+resource "aws_security_group" "lambda_sg" {
+  name_prefix = "lambda-sg-"
+  description = "Security group for Lambda function"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_lambda_function" "process_student_file" {
@@ -146,12 +168,18 @@ resource "aws_lambda_function" "process_student_file" {
   handler          = "lambda_function.lambda_handler"
   runtime          = "python3.12"
   source_code_hash = filebase64sha256("lambda.zip")
+  timeout          = 60
 
   environment {
     variables = {
       DOCDB_CLUSTER_ENDPOINT = aws_docdb_cluster.docdb.endpoint
       DOCDB_DB_NAME          = var.documentdb_db_name
     }
+  }
+
+  vpc_config {
+    subnet_ids         = module.vpc.private_subnets
+    security_group_ids = [aws_security_group.lambda_sg.id]
   }
 }
 
