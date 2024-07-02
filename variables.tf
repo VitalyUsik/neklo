@@ -52,3 +52,8 @@ variable "whitelisted_ips" {
   description = "The IP address from which you will connect to the database"
   default     = "0.0.0.0/0"
 }
+
+variable "key_pair" {
+  description = "Your key pair to use to connect to the bastion host"
+  default = "ansible-test"
+}

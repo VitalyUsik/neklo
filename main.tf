@@ -43,7 +43,7 @@ resource "aws_security_group" "docdb_sg" {
     from_port   = 27017
     to_port     = 27017
     protocol    = "tcp"
-    cidr_blocks = [var.whitelisted_ips]
+    cidr_blocks = [var.vpc_cidr]
   }
 
   egress {
@@ -164,4 +164,37 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   }
 
   depends_on = [aws_lambda_permission.allow_bucket]
+}
+
+
+resource "aws_security_group" "bastion_sg" {
+  name_prefix = "bastion-sg-"
+  description = "Security group for bastion host"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.whitelisted_ips]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "bastion" {
+  ami                    = "ami-04716897be83e3f04"  # Ubuntu Server 20.04 LTS (HVM), SSD Volume Type
+  instance_type          = "t2.micro"
+  subnet_id              = module.vpc.public_subnets[0]
+  vpc_security_group_ids = [aws_security_group.bastion_sg.id]
+  key_name               = var.key_pair
+
+  tags = {
+    Name = "BastionHost"
+  }
 }
