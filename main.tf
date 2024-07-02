@@ -2,6 +2,20 @@ provider "aws" {
   region = var.region
 }
 
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "v5.8.1"
+
+  name = var.vpc_name
+  cidr = var.vpc_cidr
+
+  azs             = var.azs
+  public_subnets  = var.public_subnets
+
+  enable_nat_gateway = false
+  map_public_ip_on_launch = true
+}
+
 resource "aws_s3_bucket" "uploads" {
   bucket = var.bucket_name
 }
@@ -20,6 +34,31 @@ resource "aws_s3_bucket_acl" "bucket_acl" {
   acl    = "private"
 }
 
+resource "aws_security_group" "docdb_sg" {
+  name_prefix = "docdb-sg-"
+  description = "Security group for DocumentDB cluster"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    from_port   = 27017
+    to_port     = 27017
+    protocol    = "tcp"
+    cidr_blocks = [var.whitelisted_ips]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_docdb_subnet_group" "default" {
+  name       = "my-docdb-subnet-group"
+  subnet_ids = module.vpc.public_subnets
+}
+
 resource "aws_docdb_cluster" "docdb" {
   cluster_identifier = var.documentdb_cluster_id
   master_username    = "masterUser"
@@ -27,6 +66,9 @@ resource "aws_docdb_cluster" "docdb" {
   engine_version     = "4.0.0"
 
   apply_immediately = true
+
+  db_subnet_group_name   = aws_docdb_subnet_group.default.name
+  vpc_security_group_ids = [aws_security_group.docdb_sg.id]
 
   depends_on = [
     aws_s3_bucket.uploads,
