@@ -3,5 +3,5 @@ output "cluter_endpoint" {
 }
 
 output "bastion_host_ip" {
-  value = aws_instance.bastion.associate_public_ip_address
+  value = aws_instance.bastion.public_ip
 }
