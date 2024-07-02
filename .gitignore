@@ -1,4 +1,6 @@
 .terraform
+terraform.tfstate
+terraform.tfstate.backup
 src/.venv
 src/lambda_package
 lambda.zip
