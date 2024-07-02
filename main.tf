@@ -140,6 +140,11 @@ resource "aws_iam_role_policy_attachment" "lambda_s3_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_secrets_manager_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
+}
+
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"
   action        = "lambda:InvokeFunction"
@@ -174,6 +179,7 @@ resource "aws_lambda_function" "process_student_file" {
     variables = {
       DOCDB_CLUSTER_ENDPOINT = aws_docdb_cluster.docdb.endpoint
       DOCDB_DB_NAME          = var.documentdb_db_name
+      DOCUMENTDB_SECRET_NAME = var.documentdb_secret_name
     }
   }
 
@@ -225,4 +231,16 @@ resource "aws_instance" "bastion" {
   tags = {
     Name = "BastionHost"
   }
+}
+
+resource "aws_secretsmanager_secret" "documentdb_secret" {
+  name = var.documentdb_secret_name
+}
+
+resource "aws_secretsmanager_secret_version" "documentdb_secret_version" {
+  secret_id = aws_secretsmanager_secret.documentdb_secret.id
+  secret_string = jsonencode({
+    username = var.documentdb_username
+    password = var.documentdb_password
+  })
 }

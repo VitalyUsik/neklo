@@ -1,7 +1,25 @@
 import os
 import boto3
 import csv
+import json
 from pymongo import MongoClient
+from botocore.exceptions import ClientError
+
+def get_credentials():
+    secret_client = boto3.client('secretsmanager')
+    try:
+        secret_name = os.environ['DOCUMENTDB_SECRET_NAME']
+        secret_value = secret_client.get_secret_value(SecretId=secret_name)
+
+        secret = secret_value['SecretString']
+        secret_json = json.loads(secret)
+        username = secret_json['username']
+        password = secret_json['password']
+
+        return (username, password)
+
+    except ClientError as e:
+        raise e
 
 def lambda_handler(event, context):
     s3 = boto3.client('s3')
@@ -17,7 +35,8 @@ def lambda_handler(event, context):
     s3.download_file(bucket, key, download_path)
     
     # Connect to DocumentDB
-    client = MongoClient(f'mongodb://masterUser:masterPassword@{os.environ['DOCDB_CLUSTER_ENDPOINT']}:27017/?tls=true&tlsCAFile=/tmp/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false')
+    (username, password) = get_credentials()
+    client = MongoClient(f'mongodb://{username}:{password}@{os.environ['DOCDB_CLUSTER_ENDPOINT']}:27017/?tls=true&tlsCAFile=/tmp/global-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false')
     db = client[os.environ['DOCDB_DB_NAME']]
     
     # Ensure the database and collection exist

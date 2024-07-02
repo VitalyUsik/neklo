@@ -1,6 +1,5 @@
 variable "region" {
   description = "AWS region"
-  default     = "sa-east-1"
 }
 
 variable "vpc_cidr" {
@@ -10,12 +9,10 @@ variable "vpc_cidr" {
 
 variable "vpc_name" {
   type    = string
-  default = "neklo-vpc"
 }
 
 variable "azs" {
   type    = list(string)
-  default = [ "sa-east-1a", "sa-east-1b" ]
 }
 
 variable "public_subnets" {
@@ -30,12 +27,10 @@ variable "private_subnets" {
 
 variable "bucket_name" {
   description = "S3 bucket name"
-  default     = "477911757103-neklo-students-bucket"
 }
 
 variable "documentdb_cluster_id" {
   description = "DocumentDB cluster identifier"
-  default     = "docdb-cluster"
 }
 
 variable "documentdb_instance_class" {
@@ -55,10 +50,21 @@ variable "lambda_function_name" {
 
 variable "whitelisted_ips" {
   description = "The IP address from which you will connect to the database"
-  default     = "0.0.0.0/0"
 }
 
 variable "key_pair" {
   description = "Your key pair to use to connect to the bastion host"
-  default = "ansible-test"
+}
+
+variable "documentdb_username" {
+  description = "DocumentDB username"
+}
+
+variable "documentdb_password" {
+  description = "DocumentDB password"
+}
+
+variable "documentdb_secret_name" {
+  description = "Secrets Manager secret name for DocumentDB credentials"
+  default     = "documentdb/credentials"
 }
