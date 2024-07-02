@@ -1,0 +1,4 @@
+.terraform
+src/.venv
+src/lambda_package
+lambda.zip
