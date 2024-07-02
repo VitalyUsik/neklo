@@ -13,7 +13,9 @@ module "vpc" {
   public_subnets  = var.public_subnets
   private_subnets = var.private_subnets
 
-  enable_nat_gateway = false
+  enable_nat_gateway = true
+  single_nat_gateway = true
+  
   map_public_ip_on_launch = true
 }
 
@@ -168,7 +170,7 @@ resource "aws_lambda_function" "process_student_file" {
   handler          = "lambda_function.lambda_handler"
   runtime          = "python3.12"
   source_code_hash = filebase64sha256("lambda.zip")
-  timeout          = 60
+  timeout          = 300
 
   environment {
     variables = {
